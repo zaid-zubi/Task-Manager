@@ -1,19 +1,26 @@
+<!-- templates/task_form.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Create Task</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if task %}Edit Task{% else %}Create New Task{% endif %}</title>
 </head>
 <body>
-    <h2>Create Task</h2>
+    <h1>{% if task %}Edit Task{% else %}Create New Task{% endif %}</h1>
+
+    <!-- Display the form for adding or editing a task -->
     <form method="POST">
         {% csrf_token %}
-        <label>Title:</label>
-        <input type="text" name="title" required>
-        <br>
-        <label>Description:</label>
-        <textarea name="description"></textarea>
-        <br>
-        <button type="submit">Create</button>
+        {{ form.as_p }} <!-- Display form fields -->
+
+        <button type="submit">{% if task %}Update Task{% else %}Create Task{% endif %}</button>
     </form>
+
+    {% if task %}
+        <a href="{% url 'task-list-page' %}">Back to Task List</a>
+    {% else %}
+        <a href="{% url 'task-list-page' %}">Back to Task List</a>
+    {% endif %}
 </body>
 </html>

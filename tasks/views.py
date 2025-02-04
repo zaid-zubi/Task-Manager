@@ -7,6 +7,7 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.authentication import BasicAuthentication
 
 class TaskViewSet(ViewSet):
     """
@@ -17,7 +18,8 @@ class TaskViewSet(ViewSet):
     - PUT /api/tasks/{id}/ → Update a task (Authenticated users only)
     - DELETE /api/tasks/{id}/ → Delete a task (Authenticated users only)
     """
-    permission_classes = [IsAuthenticated]  # Default for all actions
+    authentication_classes = [BasicAuthentication]  # Use Basic Authentication
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access
 
     def list(self, request):
         """Retrieve a list of tasks (Authenticated users only)"""
@@ -57,16 +59,18 @@ class TaskViewSet(ViewSet):
         return Response({"message": "Task deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     
     def task_form_page(self, request, task_id=None):
-        """Render the task form page for creating/editing a task"""
+        """
+        Render the task form page for creating/editing a task.
+        Users can only edit tasks they created.
+        """
         task = None
         if task_id:
             task = get_object_or_404(Task, id=task_id, user=request.user)  # Only task owner can edit
 
         if request.method == "POST":
-            # Handle form submission for both creating and updating tasks
             form = TaskIn(request.POST, instance=task)
             if form.is_valid():
-                form.save(user=request.user)
+                form.save(user=request.user)  # Ensure task is linked to user
                 return redirect('task-list-page')  # Redirect to task list page after saving
         else:
             form = TaskIn(instance=task)
@@ -78,3 +82,12 @@ class TaskViewSet(ViewSet):
         response = self.list(request=request)
         tasks = response.data
         return render(request, 'task_list.html', {'tasks': tasks})
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def public_task_list(self, request):
+        """
+        Endpoint to get a list of all tasks (Public access).
+        """
+        tasks = Task.objects.all()
+        serializer = TaskIn(tasks, many=True)
+        return Response(serializer.data)

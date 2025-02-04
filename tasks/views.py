@@ -9,6 +9,15 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.authentication import BasicAuthentication
 
+
+def http_response(data, status_code, message):
+    return Response({
+        "data": data,
+        "status": status_code,
+        "message": message
+    })
+
+
 class TaskViewSet(ViewSet):
     """
     Task API:
@@ -25,13 +34,13 @@ class TaskViewSet(ViewSet):
         """Retrieve a list of tasks (Authenticated users only)"""
         tasks = Task.objects.filter(user=request.user)
         serializer = TaskIn(tasks, many=True)
-        return Response(serializer.data)
+        return http_response(data=serializer.data, status_code=status.HTTP_200_OK, message="Tasks retrieved successfully")
     
     def retrieve(self, request, pk=None):
         """Retrieve a single task (Public access)"""
         task = get_object_or_404(Task, id=pk)
         serializer = TaskIn(instance=task)
-        return Response(serializer.data)
+        return http_response(data=serializer.data, status_code=status.HTTP_200_OK, message="Task retrieved successfully")
     
     @swagger_auto_schema(request_body=TaskIn)
     def create(self, request):
@@ -39,7 +48,7 @@ class TaskViewSet(ViewSet):
         serializer = TaskIn(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)  # Ensure task is linked to user
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return http_response(data=serializer.data, status_code=status.HTTP_201_CREATED, message="Task created successfully")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(request_body=TaskIn)
@@ -49,14 +58,14 @@ class TaskViewSet(ViewSet):
         serializer = TaskIn(instance=task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return http_response(data=serializer.data, status_code=status.HTTP_201_CREATED, message="Task updated successfully")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, pk=None):
         """Delete a task (Authenticated users only)"""
         task = get_object_or_404(Task, id=pk, user=request.user)
         task.delete()
-        return Response({"message": "Task deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return http_response(data=None, status_code=status.HTTP_204_NO_CONTENT, message="Task deleted successfully")
     
     def task_form_page(self, request, task_id=None):
         """
@@ -90,4 +99,4 @@ class TaskViewSet(ViewSet):
         """
         tasks = Task.objects.all()
         serializer = TaskIn(tasks, many=True)
-        return Response(serializer.data)
+        return http_response(data=serializer.data, status_code=status.HTTP_200_OK, message="Tasks retrieved successfully")

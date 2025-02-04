@@ -7,20 +7,9 @@ router = DefaultRouter()
 router.register(r'tasks', TaskViewSet, basename='task')
 
 urlpatterns = [
-<<<<<<< Updated upstream
-    # API Endpoints (Handled by ViewSet)
-    path('api/', include(router.urls)),  # Grouping all task-related endpoints
-
-    # HTML Pages (Not part of API but accessible for authenticated users)
-    path('create-task/', TaskViewSet.as_view({'get': 'task_form_page'}), name='task-form-page'),  # Create task form
-    path('create-task/<int:task_id>/', TaskViewSet.as_view({'get': 'task_form_page'}), name='task-edit-page'),  # Edit task form
-    path('tasks/', TaskViewSet.as_view({'get': 'task_list_page'}), name='task-list-page'),  # Task list page
-]
-=======
     path('api/', include(router.urls)),
 
     path('create-task/', TaskViewSet.as_view({'get': 'task_form_page'}), name='task-form-page'),
     path('create-task/<int:task_id>/', TaskViewSet.as_view({'get': 'task_form_page'}), name='task-edit-page'),
     path('tasks/', TaskViewSet.as_view({'get': 'task_list_page'}), name='task-list-page'),
 ]
->>>>>>> Stashed changes

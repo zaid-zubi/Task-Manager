@@ -76,10 +76,5 @@ class TaskViewSet(ViewSet):
     def task_list_page(self, request):
         """Render the task list page (Authenticated users only)"""
         response = self.list(request=request)
-        tasks = response.data
-        
-<<<<<<< Updated upstream
+        tasks = response.data        
         return render(request, 'task_list.html', {'tasks': tasks})
-=======
-        return render(request, 'task_list.html', {'tasks': tasks})
->>>>>>> Stashed changes

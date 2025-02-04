@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from .models import Task
 
 class TaskIn(serializers.ModelSerializer):
@@ -6,7 +8,10 @@ class TaskIn(serializers.ModelSerializer):
         model = Task
         fields = ['title', 'description', 'completed', 'user']
 
-from rest_framework.exceptions import ValidationError
+class TaskOut(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'completed', 'user', 'created_at']
 
 def create(self, validated_data):
     user = self.context['request'].user

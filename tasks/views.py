@@ -1,47 +1,34 @@
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import action
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Task
-from .serializers import TaskIn
-from rest_framework.viewsets import ViewSet
-from rest_framework.response import Response
 from rest_framework import status
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.viewsets import ViewSet
+from drf_yasg.utils import swagger_auto_schema
 
-
-def http_response(data, status_code, message):
-    return Response({
-        "data": data,
-        "status": status_code,
-        "message": message
-    })
-
+from tasks.core.response import http_error_response, http_response
+from .models import Task
+from .serializers import TaskIn, TaskOut
 
 class TaskViewSet(ViewSet):
-    """
-    Task API:
-    - POST /api/tasks/ → Create a task (Authenticated users only)
-    - GET /api/tasks/ → List all tasks (Authenticated users only)
-    - GET /api/tasks/{id}/ → Retrieve a task (Public)
-    - PUT /api/tasks/{id}/ → Update a task (Authenticated users only)
-    - DELETE /api/tasks/{id}/ → Delete a task (Authenticated users only)
-    """
-    authentication_classes = [BasicAuthentication]  # Use Basic Authentication
-    permission_classes = [IsAuthenticated]  # Only authenticated users can access
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def list(self, request):
         """Retrieve a list of tasks (Authenticated users only)"""
         tasks = Task.objects.filter(user=request.user)
-        serializer = TaskIn(tasks, many=True)
+        serializer = TaskOut(tasks, many=True)
         return http_response(data=serializer.data, status_code=status.HTTP_200_OK, message="Tasks retrieved successfully")
-    
+
     def retrieve(self, request, pk=None):
         """Retrieve a single task (Public access)"""
-        task = get_object_or_404(Task, id=pk)
-        serializer = TaskIn(instance=task)
+        try:
+            task = Task.objects.get(id=pk, user=request.user)
+        except Task.DoesNotExist as e:
+            raise http_error_response(errors=str(e), status_code=status.HTTP_404_NOT_FOUND, message="Task not found")
+        serializer = TaskOut(instance=task)
         return http_response(data=serializer.data, status_code=status.HTTP_200_OK, message="Task retrieved successfully")
-    
+
     @swagger_auto_schema(request_body=TaskIn)
     def create(self, request):
         """Create a task (Authenticated users only)"""
@@ -49,24 +36,30 @@ class TaskViewSet(ViewSet):
         if serializer.is_valid():
             serializer.save(user=request.user)  # Ensure task is linked to user
             return http_response(data=serializer.data, status_code=status.HTTP_201_CREATED, message="Task created successfully")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        return http_error_response(errors=serializer.errors, status=status.HTTP_400_BAD_REQUEST, message="Invalid data")
+
     @swagger_auto_schema(request_body=TaskIn)
     def update(self, request, pk=None):
         """Update a task (Authenticated users only)"""
-        task = get_object_or_404(Task, id=pk, user=request.user)
+        try:
+            task = Task.objects.get(id=pk, user=request.user)
+        except Task.DoesNotExist as e:
+            raise http_error_response(errors=str(e), status_code=status.HTTP_404_NOT_FOUND, message="Task not found")
         serializer = TaskIn(instance=task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return http_response(data=serializer.data, status_code=status.HTTP_201_CREATED, message="Task updated successfully")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return http_error_response(errors=serializer.errors, status=status.HTTP_400_BAD_REQUEST, message="Invalid data")
 
     def destroy(self, request, pk=None):
         """Delete a task (Authenticated users only)"""
-        task = get_object_or_404(Task, id=pk, user=request.user)
+        try:
+            task = Task.objects.get(id=pk, user=request.user)
+        except Task.DoesNotExist as e:
+            raise http_error_response(errors=str(e), status_code=status.HTTP_404_NOT_FOUND, message="Task not found")
         task.delete()
         return http_response(data=None, status_code=status.HTTP_204_NO_CONTENT, message="Task deleted successfully")
-    
+
     def task_form_page(self, request, task_id=None):
         """
         Render the task form page for creating/editing a task.
@@ -74,7 +67,10 @@ class TaskViewSet(ViewSet):
         """
         task = None
         if task_id:
-            task = get_object_or_404(Task, id=task_id, user=request.user)  # Only task owner can edit
+            try:
+                task = Task.objects.get(id=task_id, user=request.user)
+            except Task.DoesNotExist as e:
+                raise http_error_response(errors=str(e), status_code=status.HTTP_404_NOT_FOUND, message="Task not found")
 
         if request.method == "POST":
             form = TaskIn(request.POST, instance=task)
@@ -85,12 +81,12 @@ class TaskViewSet(ViewSet):
             form = TaskIn(instance=task)
 
         return render(request, 'task_form.html', {'form': form, 'task': task})
-    
+
     def task_list_page(self, request):
         """Render the task list page (Authenticated users only)"""
         response = self.list(request=request)
         tasks = response.data
-        return render(request, 'task_list.html', {'tasks': tasks})
+        return render(request, 'task_list.html', {'tasks': tasks.get("data")})
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def public_task_list(self, request):

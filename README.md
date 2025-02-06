@@ -16,7 +16,7 @@ A Django-based task management application with REST API endpoints for managing 
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/task_manager.git
+    git clone https://github.com/zaid-zubi/Task-Manager
     cd task_manager
     ```
 
